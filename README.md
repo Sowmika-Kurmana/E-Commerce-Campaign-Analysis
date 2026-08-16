@@ -53,7 +53,6 @@ The primary outcome variable is **`converted`**, which will be used to calculate
 * **Jupyter Notebook** – Development and analysis environment
 * **GitHub** – Project documentation and portfolio
 
----
 
 ## 5. Project Workflow
 
@@ -69,7 +68,6 @@ The project follows these steps:
 8. Interpret the statistical results
 9. Develop business recommendations
 
----
 
 ## 6. Data Cleaning
 
@@ -89,7 +87,6 @@ The following steps were performed:
 
 The original dataset contained **294,478 records**. After cleaning and removing duplicate users, the final dataset contained **290,584 records**.
 
----
 
 ## 7. Exploratory Data Analysis
 
@@ -105,7 +102,6 @@ The analysis included:
 
 The Control group achieved a conversion rate of approximately **12.04%**, while the Treatment group achieved approximately **11.88%**.
 
----
 
 ## 8. A/B Testing Methodology
 
@@ -127,7 +123,6 @@ The significance level was set to:
 
 The test calculated the conversion rates, conversion difference, relative lift, z-statistic, and p-value.
 
----
 
 ## 9. Key Results
 
@@ -146,7 +141,6 @@ However, the **p-value of 0.18965 is greater than 0.05**. Therefore, the null hy
 
 There is **insufficient statistical evidence to conclude that the Treatment campaign produced a significantly different conversion rate from the Control campaign**.
 
----
 
 ## 10. Business Recommendations
 
@@ -159,7 +153,6 @@ Based on the A/B testing results:
 
 Although the Treatment group showed a **1.31% relative decrease** in conversion, this difference was not statistically significant.
 
----
 
 ## 11. Conclusion
 
@@ -173,7 +166,6 @@ Therefore, there is insufficient statistical evidence to conclude that the Treat
 
 Based on the experiment, the existing landing page should be retained while further experimentation is conducted.
 
----
 
 ## 12. Project Structure
 
@@ -186,7 +178,6 @@ E-Commerce-Campaign-Analysis/
 └── requirements.txt
 ```
 
----
 
 ## 13. How to Run
 
@@ -222,7 +213,6 @@ Open:
 
 Run the notebook cells sequentially to reproduce the analysis.
 
----
 
 ## 14. Author
 
