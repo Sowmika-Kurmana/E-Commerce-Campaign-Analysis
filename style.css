@@ -1,0 +1,69 @@
+/* Custom Styles for E-Commerce Campaign Analysis A/B Testing Dashboard */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Nav Item active highlights */
+.active-nav {
+  background-color: #f1f5f9 !important;
+  color: #4f46e5 !important;
+  font-weight: 700 !important;
+}
+
+.active-nav i {
+  color: #4f46e5 !important;
+}
+
+/* Card hover transitions */
+.hover-card-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
+}
+
+/* Drag over active state */
+.drag-over {
+  border-color: #6366f1 !important;
+  background-color: #eef2ff !important;
+}

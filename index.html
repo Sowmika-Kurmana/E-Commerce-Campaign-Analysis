@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>E-Commerce Campaign Analysis & A/B Testing | IBM Q2D Internship Dashboard</title>
+  <meta name="description" content="Professional A/B Testing Analytics Dashboard evaluating e-commerce landing page conversion rates, two-proportion z-test, and business recommendations." />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              200: '#c7d2fe',
+              300: '#a5b4fc',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+              950: '#1e1b4b',
+            },
+            slate: {
+              850: '#151f32',
+              900: '#0f172a',
+              950: '#080d1a',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js & D3 / PapaParse for dynamic CSV parsing & statistics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans min-h-screen flex flex-col selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- Top Navigation Bar -->
+  <header id="main-header" class="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm transition-all duration-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Left: Logo & Titles -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+            <i data-lucide="split" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-lg font-bold text-slate-900 tracking-tight">E-Commerce Campaign Analysis</h1>
+              <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/80">
+                <i data-lucide="award" class="w-3 h-3 text-indigo-600"></i>
+                IBM Q2D Internship
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 font-medium">A/B Testing Analytics Dashboard &bull; Author: Sowmika Kurmana</p>
+          </div>
+        </div>
+
+        <!-- Right: Header Actions -->
+        <div class="flex items-center gap-3">
+          <!-- Live Dataset Status Badge -->
+          <div id="dataset-status-badge" class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span id="dataset-status-text">Dataset: Verified 290,584 Rows</span>
+          </div>
+
+          <!-- Presentation Mode Button -->
+          <button id="toggle-presentation-btn" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-white shadow-sm transition-all duration-150 active:scale-95">
+            <i data-lucide="presentation" class="w-4 h-4 text-indigo-400"></i>
+            <span id="presentation-btn-text">Presentation Mode</span>
+          </button>
+
+          <!-- GitHub Repo Link -->
+          <a href="https://github.com/Sowmika-Kurmana/E-Commerce-Campaign-Analysis" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition-colors">
+            <i data-lucide="github" class="w-4 h-4"></i>
+            <span class="hidden md:inline">GitHub Repository</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Presentation Mode Modal / Overlay View (Hidden by Default) -->
+  <div id="presentation-view" class="hidden fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl text-white overflow-y-auto p-4 sm:p-8 animate-fadeIn">
+    <div class="max-w-6xl mx-auto min-h-full flex flex-col justify-between">
+      
+      <!-- Presentation Header -->
+      <div class="flex items-center justify-between pb-6 border-b border-slate-800">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded bg-indigo-500/20 text-indigo-300 text-xs font-mono font-medium border border-indigo-500/30">IBM Q2D INTERNSHIP PRESENTATION</span>
+            <span class="text-xs text-slate-400 font-mono">EXECUTIVE SUMMARY SLIDE</span>
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white mt-1">E-Commerce Landing Page A/B Testing Evaluation</h2>
+        </div>
+        <button id="close-presentation-btn" class="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <!-- Presentation 4-Pillar Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-8">
+        
+        <!-- Pillar 1: Business Problem -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/50 transition">
+          <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-indigo-600/10 rounded-full blur-xl pointer-events-none"></div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold">1</div>
+            <h3 class="text-lg font-bold text-white">Business Problem & Objective</h3>
+          </div>
+          <p class="text-slate-300 text-sm leading-relaxed mb-4">
+            An e-commerce enterprise deployed a redesigned landing page (<code class="text-indigo-300 bg-slate-800 px-1.5 py-0.5 rounded text-xs font-mono">new_page</code>) to test whether it outperforms the existing baseline (<code class="text-indigo-300 bg-slate-800 px-1.5 py-0.5 rounded text-xs font-mono">old_page</code>).
+          </p>
+          <div class="bg-slate-950/60 rounded-xl p-3.5 border border-slate-800/80 text-xs text-slate-300 space-y-1.5">
+            <div class="flex justify-between font-mono"><span class="text-slate-400">Sample Evaluated:</span> <span class="text-white font-bold" id="pres-sample-users">290,584 Cleaned Users</span></div>
+            <div class="flex justify-between font-mono"><span class="text-slate-400">Metric of Interest:</span> <span class="text-white font-bold">Conversion Rate (converted = 1)</span></div>
+            <div class="flex justify-between font-mono"><span class="text-slate-400">Target Decision:</span> <span class="text-indigo-400 font-semibold">Adopt new page or retain existing</span></div>
+          </div>
+        </div>
+
+        <!-- Pillar 2: Observed Conversion Results -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/50 transition">
+          <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-blue-600/10 rounded-full blur-xl pointer-events-none"></div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">2</div>
+            <h3 class="text-lg font-bold text-white">Observed Conversion Performance</h3>
+          </div>
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+              <span class="text-[11px] text-slate-400 font-medium">Control (old_page)</span>
+              <div class="text-2xl font-extrabold text-blue-400 font-mono" id="pres-control-cr">12.04%</div>
+              <span class="text-[11px] text-slate-500 font-mono" id="pres-control-counts">17,489 / 145,274</span>
+            </div>
+            <div class="bg-slate-950/70 p-3 rounded-xl border border-slate-800">
+              <span class="text-[11px] text-slate-400 font-medium">Treatment (new_page)</span>
+              <div class="text-2xl font-extrabold text-indigo-400 font-mono" id="pres-treatment-cr">11.88%</div>
+              <span class="text-[11px] text-slate-500 font-mono" id="pres-treatment-counts">17,264 / 145,311</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-between px-3.5 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs">
+            <span class="text-amber-300 font-medium">Observed Lift: <strong class="font-mono" id="pres-obs-lift">-1.31%</strong></span>
+            <span class="text-slate-300 font-mono" id="pres-cr-diff">Diff: -0.158% points</span>
+          </div>
+        </div>
+
+        <!-- Pillar 3: Statistical Hypothesis Testing -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden group hover:border-indigo-500/50 transition">
+          <div class="absolute -right-6 -bottom-6 w-28 h-28 bg-emerald-600/10 rounded-full blur-xl pointer-events-none"></div>
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">3</div>
+            <h3 class="text-lg font-bold text-white">Two-Proportion Z-Test</h3>
+          </div>
+          <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+            <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase">z-statistic</span>
+              <div class="text-lg font-bold text-white font-mono" id="pres-z-stat">-1.312</div>
+            </div>
+            <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase">p-value</span>
+              <div class="text-lg font-bold text-emerald-400 font-mono" id="pres-p-val">0.18965</div>
+            </div>
+            <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[10px] text-slate-400 uppercase">Threshold (α)</span>
+              <div class="text-lg font-bold text-slate-300 font-mono">0.05</div>
+            </div>
+          </div>
+          <div class="p-3 bg-slate-950/90 rounded-xl border border-slate-800 text-xs text-slate-300">
+            <div class="flex items-center justify-between mb-1">
+              <span class="font-bold text-amber-400 flex items-center gap-1.5" id="pres-decision-badge"><i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> FAIL TO REJECT H₀</span>
+              <span class="text-[11px] font-mono text-slate-400" id="pres-p-comp">p (0.18965) &gt; α (0.05)</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-tight" id="pres-stat-desc">
+              The observed conversion difference is <strong>not statistically significant</strong>. The experiment does not provide sufficient evidence that the new page altered conversion.
+            </p>
+          </div>
+        </div>
+
+        <!-- Pillar 4: Business Recommendation -->
+        <div class="bg-gradient-to-br from-indigo-950/80 to-slate-900 border border-indigo-500/40 rounded-2xl p-6 shadow-xl relative overflow-hidden group">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-xl bg-indigo-500 text-white flex items-center justify-center font-bold">4</div>
+            <h3 class="text-lg font-bold text-white">Recommended Business Decision</h3>
+          </div>
+          <div class="p-3.5 bg-indigo-600/20 border border-indigo-400/30 rounded-xl mb-3">
+            <span class="text-xs font-semibold text-indigo-300 uppercase tracking-wider block mb-1">Actionable Decision</span>
+            <div class="text-base font-extrabold text-white flex items-center gap-2" id="pres-rec-action">
+              <i data-lucide="check-circle" class="w-5 h-5 text-indigo-400"></i>
+              <span>RETAIN THE EXISTING LANDING PAGE FOR NOW</span>
+            </div>
+          </div>
+          <ul class="space-y-1.5 text-xs text-slate-300" id="pres-rec-bullets">
+            <li class="flex items-start gap-1.5">
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0"></i>
+              <span>Avoid costly migration risk for a variant lacking evidence of lift.</span>
+            </li>
+            <li class="flex items-start gap-1.5">
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0"></i>
+              <span>Refine value proposition, CTAs, and run multivariate iterations.</span>
+            </li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Presentation Footer -->
+      <div class="pt-4 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400 font-mono">
+        <div>IBM Q2D Internship Project &bull; Sowmika Kurmana</div>
+        <div>Press [Esc] or Close Button to return to Full Interactive Dashboard</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Main Container with Sidebar + Content -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1 flex flex-col lg:flex-row gap-8">
+    
+    <!-- Left Navigation Sidebar -->
+    <aside class="w-full lg:w-64 shrink-0">
+      <div class="sticky top-24 space-y-4">
+        
+        <!-- Sidebar Navigation Card -->
+        <nav class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-3.5 space-y-1">
+          <div class="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            Navigation Index
+          </div>
+          
+          <a href="#section-overview" class="nav-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors active-nav">
+            <i data-lucide="layout-dashboard" class="w-4 h-4 text-indigo-600"></i>
+            <span>1. Overview</span>
+          </a>
+
+          <a href="#section-data-quality" class="nav-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+            <i data-lucide="shield-check" class="w-4 h-4 text-slate-500"></i>
+            <span>2. Data Quality</span>
+          </a>
+
+          <a href="#section-experiment" class="nav-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+            <i data-lucide="users" class="w-4 h-4 text-slate-500"></i>
+            <span>3. Experiment Analysis</span>
+          </a>
+
+          <a href="#section-conversion" class="nav-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+            <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-500"></i>
+            <span>4. Conversion Analysis</span>
+          </a>
+
+          <a href="#section-statistical-test" class="nav-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+            <i data-lucide="calculator" class="w-4 h-4 text-slate-500"></i>
+            <span>5. Statistical Test</span>
+          </a>
+
+          <a href="#section-recommendation" class="nav-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-slate-500"></i>
+            <span>6. Business Decision</span>
+          </a>
+
+          <a href="#section-workflow" class="nav-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+            <i data-lucide="git-branch" class="w-4 h-4 text-slate-500"></i>
+            <span>7. Experiment Workflow</span>
+          </a>
+
+          <a href="#section-future" class="nav-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors">
+            <i data-lucide="sparkles" class="w-4 h-4 text-slate-500"></i>
+            <span>8. Future Experiments</span>
+          </a>
+        </nav>
+
+        <!-- Interactive Quick Action Card -->
+        <div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-4 shadow-sm space-y-3">
+          <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-indigo-300">
+            <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+            <span>Interactive Controls</span>
+          </div>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Test custom CSV datasets or re-run statistical models dynamically in real-time.
+          </p>
+          <a href="#section-data-interaction" class="block text-center py-2 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition-colors">
+            Upload & Analyze CSV
+          </a>
+        </div>
+
+        <!-- Project Meta Card -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 text-xs space-y-2">
+          <div class="font-bold text-slate-900">Project Credentials</div>
+          <div class="text-slate-600"><strong>Author:</strong> Sowmika Kurmana</div>
+          <div class="text-slate-600"><strong>Program:</strong> B.Tech CSE (Data Science)</div>
+          <div class="text-slate-600"><strong>Institution:</strong> ANITS</div>
+          <div class="text-slate-600"><strong>Internship:</strong> IBM Q2D</div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 space-y-10 min-w-0">
+
+      <!-- SECTION: INTERACTIVE DATA ENGINE & UPLOAD AREA -->
+      <section id="section-data-interaction" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100">DYNAMIC ENGINE</span>
+              <h2 class="text-xl font-bold text-slate-900">Dataset Loader & Analytical Engine</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Load the verified IBM project dataset or upload your own <code class="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-700">ab_data.csv</code> to run client-side statistical pipeline calculations.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="reset-default-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              Reset Project Default
+            </button>
+          </div>
+        </div>
+
+        <!-- Drag and Drop Box & Quick Buttons -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          <!-- Drop Area -->
+          <div id="drop-zone" class="md:col-span-2 border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/40 rounded-2xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center group">
+            <input type="file" id="csv-file-input" accept=".csv" class="hidden" />
+            <div class="w-12 h-12 rounded-2xl bg-indigo-50 group-hover:bg-indigo-100 text-indigo-600 flex items-center justify-center mb-2.5 transition">
+              <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-sm font-bold text-slate-800">Upload <span class="text-indigo-600">A/B Testing CSV Dataset</span></h3>
+            <p class="text-xs text-slate-500 mt-1">Drag & drop your CSV file here or click to browse local files</p>
+            <span class="text-[10px] text-slate-400 mt-2 font-mono">Expected columns: user_id, timestamp, group, landing_page, converted</span>
+          </div>
+
+          <!-- Dataset Status & Run Engine -->
+          <div class="bg-slate-50 rounded-2xl border border-slate-200/80 p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Current Dataset Status</span>
+              <div class="mt-1 font-bold text-slate-900 text-sm flex items-center gap-2" id="active-dataset-label">
+                <i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i>
+                IBM Project Verified Data
+              </div>
+              <p class="text-xs text-slate-500 mt-1" id="active-dataset-desc">290,584 cleaned user records ready for statistical evaluation.</p>
+            </div>
+
+            <div class="space-y-2">
+              <div id="parsing-progress-container" class="hidden">
+                <div class="flex justify-between text-xs font-mono text-slate-600 mb-1">
+                  <span id="parsing-status-text">Processing CSV...</span>
+                  <span id="parsing-percent-text">0%</span>
+                </div>
+                <div class="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                  <div id="parsing-progress-bar" class="bg-indigo-600 h-1.5 rounded-full w-0 transition-all duration-150"></div>
+                </div>
+              </div>
+
+              <button id="run-analysis-btn" class="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center justify-center gap-2">
+                <i data-lucide="play" class="w-3.5 h-3.5 fill-current"></i>
+                <span>Run Analysis & Update Metrics</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Real-Time Data Pipeline Feedback Banner -->
+        <div id="pipeline-feedback-banner" class="bg-indigo-50/70 border border-indigo-100 rounded-xl p-3.5 flex items-start gap-3 text-xs text-indigo-950">
+          <i data-lucide="info" class="w-4 h-4 text-indigo-600 mt-0.5 shrink-0"></i>
+          <div id="pipeline-feedback-content">
+            <strong class="font-semibold text-indigo-900">Project Baseline Loaded:</strong>
+            <span class="text-indigo-800"> Initial 294,478 rows parsed &bull; 3,894 initial duplicate users &bull; 3,893 invalid combinations filtered &bull; 1 duplicate user removed &bull; Cleaned dataset: 290,584 records.</span>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SECTION 1: OVERVIEW -->
+      <section id="section-overview" class="space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">SECTION 1</span>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Executive Overview</h2>
+          <p class="text-sm text-slate-600 mt-1 max-w-3xl leading-relaxed">
+            This dashboard evaluates whether a new e-commerce landing page significantly improves customer conversion using A/B testing.
+          </p>
+        </div>
+
+        <!-- 6 Core KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          
+          <!-- KPI 1: Total Users -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-all group">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider">Total Users</span>
+              <div class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
+                <i data-lucide="users" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <div class="text-xl font-extrabold text-slate-900 font-mono tracking-tight" id="kpi-total-users">290,584</div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block">Final cleaned sample</span>
+          </div>
+
+          <!-- KPI 2: Control Users -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-all group">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider">Control Users</span>
+              <div class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-blue-50 group-hover:text-blue-600 flex items-center justify-center transition-colors">
+                <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <div class="text-xl font-extrabold text-slate-900 font-mono tracking-tight" id="kpi-control-users">145,274</div>
+            <span class="text-[10px] text-blue-600 font-medium mt-0.5 block">Shown old_page</span>
+          </div>
+
+          <!-- KPI 3: Treatment Users -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-all group">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider">Treatment Users</span>
+              <div class="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <div class="text-xl font-extrabold text-slate-900 font-mono tracking-tight" id="kpi-treatment-users">145,311</div>
+            <span class="text-[10px] text-indigo-600 font-medium mt-0.5 block">Shown new_page</span>
+          </div>
+
+          <!-- KPI 4: Control Conversion -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-all group">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider">Control CR</span>
+              <div class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <div class="text-xl font-extrabold text-blue-700 font-mono tracking-tight" id="kpi-control-cr">12.04%</div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block font-mono" id="kpi-control-conv-count">17,489 conversions</span>
+          </div>
+
+          <!-- KPI 5: Treatment Conversion -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-all group">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider">Treatment CR</span>
+              <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center" id="kpi-treatment-icon-container">
+                <i data-lucide="trending-down" class="w-3.5 h-3.5" id="kpi-treatment-trend-icon"></i>
+              </div>
+            </div>
+            <div class="text-xl font-extrabold text-indigo-700 font-mono tracking-tight" id="kpi-treatment-cr">11.88%</div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block font-mono" id="kpi-treatment-conv-count">17,264 conversions</span>
+          </div>
+
+          <!-- KPI 6: Relative Lift -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:shadow-md transition-all group">
+            <div class="flex items-center justify-between text-slate-400 mb-2">
+              <span class="text-[11px] font-semibold uppercase tracking-wider">Relative Lift</span>
+              <div class="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center" id="kpi-lift-icon-container">
+                <i data-lucide="percent" class="w-3.5 h-3.5"></i>
+              </div>
+            </div>
+            <div class="text-xl font-extrabold text-amber-700 font-mono tracking-tight" id="kpi-relative-lift">-1.31%</div>
+            <span class="text-[10px] text-slate-500 font-medium mt-0.5 block font-mono" id="kpi-cr-diff">-0.158% points</span>
+          </div>
+
+        </div>
+
+        <!-- Problem Statement & Core Hypothesis Card -->
+        <div class="bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-2xl p-6 shadow-sm border border-slate-800">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="md:col-span-2 space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">BUSINESS INQUIRY</span>
+                <span class="text-xs text-slate-400">A/B Testing Decision Framework</span>
+              </div>
+              <h3 class="text-lg font-bold text-white">Did the Test Campaign significantly improve customer conversion?</h3>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                Evaluating landing page effectiveness requires rigorous statistical hypothesis testing. Simply observing a minor difference is insufficient due to random sampling variations.
+              </p>
+            </div>
+            <div class="bg-slate-950/60 rounded-xl p-4 border border-slate-800 flex flex-col justify-center space-y-2">
+              <span class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">Test Specification</span>
+              <div class="text-xs text-slate-300 space-y-1">
+                <div class="flex justify-between font-mono"><span>Method:</span> <strong class="text-white">2-Proportion Z-Test</strong></div>
+                <div class="flex justify-between font-mono"><span>Threshold:</span> <strong class="text-indigo-400">α = 0.05 (Two-Sided)</strong></div>
+                <div class="flex justify-between font-mono"><span>Result:</span> <strong class="text-amber-400" id="overview-spec-result">Fail to Reject H₀</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SECTION 2: DATA QUALITY & CLEANING -->
+      <section id="section-data-quality" class="space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">SECTION 2</span>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Data Quality & Cleaning Pipeline</h2>
+          <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+            Data integrity verification ensuring no mismatch assignments or duplicate entries confound the A/B testing results.
+          </p>
+        </div>
+
+        <!-- 5-Stage Data Cleaning Funnel Visualization -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <i data-lucide="filter" class="w-4 h-4 text-indigo-600"></i>
+            Data Cleaning Workflow Pipeline
+          </h3>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            
+            <!-- Stage 1 -->
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center relative flex flex-col justify-between">
+              <span class="text-[10px] font-mono uppercase text-slate-400 font-bold">Stage 1</span>
+              <div class="my-2">
+                <div class="text-xs font-bold text-slate-800">Raw Dataset</div>
+                <div class="text-sm font-extrabold text-slate-900 font-mono mt-0.5" id="dq-raw-records">294,478</div>
+              </div>
+              <span class="text-[10px] text-slate-500 font-medium">Initial records</span>
+            </div>
+
+            <!-- Stage 2 -->
+            <div class="p-3 rounded-xl bg-amber-50/60 border border-amber-200 text-center relative flex flex-col justify-between">
+              <span class="text-[10px] font-mono uppercase text-amber-600 font-bold">Stage 2</span>
+              <div class="my-2">
+                <div class="text-xs font-bold text-amber-900">Duplicate Checks</div>
+                <div class="text-sm font-extrabold text-amber-700 font-mono mt-0.5" id="dq-dup-users">3,894</div>
+              </div>
+              <span class="text-[10px] text-amber-600 font-medium">Duplicate User IDs</span>
+            </div>
+
+            <!-- Stage 3 -->
+            <div class="p-3 rounded-xl bg-rose-50/60 border border-rose-200 text-center relative flex flex-col justify-between">
+              <span class="text-[10px] font-mono uppercase text-rose-600 font-bold">Stage 3</span>
+              <div class="my-2">
+                <div class="text-xs font-bold text-rose-900">Invalid Removed</div>
+                <div class="text-sm font-extrabold text-rose-700 font-mono mt-0.5" id="dq-invalid-removed">-3,893</div>
+              </div>
+              <span class="text-[10px] text-rose-600 font-medium">Group/page mismatch</span>
+            </div>
+
+            <!-- Stage 4 -->
+            <div class="p-3 rounded-xl bg-blue-50/60 border border-blue-200 text-center relative flex flex-col justify-between">
+              <span class="text-[10px] font-mono uppercase text-blue-600 font-bold">Stage 4</span>
+              <div class="my-2">
+                <div class="text-xs font-bold text-blue-900">Duplicate Removed</div>
+                <div class="text-sm font-extrabold text-blue-700 font-mono mt-0.5" id="dq-dedup-user">-1</div>
+              </div>
+              <span class="text-[10px] text-blue-600 font-medium" id="dq-dedup-label">User 773192 deduped</span>
+            </div>
+
+            <!-- Stage 5 -->
+            <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-center relative flex flex-col justify-between">
+              <span class="text-[10px] font-mono uppercase text-emerald-600 font-bold">Stage 5</span>
+              <div class="my-2">
+                <div class="text-xs font-bold text-emerald-900">Validated Dataset</div>
+                <div class="text-sm font-extrabold text-emerald-700 font-mono mt-0.5" id="dq-final-records">290,584</div>
+              </div>
+              <span class="text-[10px] text-emerald-600 font-medium">100% Unique users</span>
+            </div>
+
+            <!-- Stage 6 -->
+            <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-center relative flex flex-col justify-between">
+              <span class="text-[10px] font-mono uppercase text-indigo-600 font-bold">Stage 6</span>
+              <div class="my-2">
+                <div class="text-xs font-bold text-indigo-900">A/B Testing</div>
+                <div class="text-sm font-extrabold text-indigo-700 font-mono mt-0.5">Ready</div>
+              </div>
+              <span class="text-[10px] text-indigo-600 font-medium">Hypothesis testing</span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Data Quality Audit Table & Invalid Assignment Breakdown -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Summary Table Card -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="clipboard-check" class="w-4 h-4 text-indigo-600"></i>
+              Data Cleaning Audit Summary
+            </h3>
+            
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left">
+                <thead class="text-[11px] text-slate-500 uppercase bg-slate-50 border-y border-slate-200 font-mono">
+                  <tr>
+                    <th class="py-2 px-3">Data Quality Metric</th>
+                    <th class="py-2 px-3 text-right">Value / Count</th>
+                    <th class="py-2 px-3 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+                  <tr>
+                    <td class="py-2.5 px-3">Original Raw Records</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-semibold" id="table-raw-records">294,478</td>
+                    <td class="py-2.5 px-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600">Raw</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 px-3">Duplicate User IDs (Initial)</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-semibold text-amber-600" id="table-dup-ids">3,894</td>
+                    <td class="py-2.5 px-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200" id="table-dup-status">Flagged</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 px-3">Invalid Assignments Removed</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-semibold text-rose-600" id="table-invalid-removed">3,893</td>
+                    <td class="py-2.5 px-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200" id="table-invalid-status">Filtered</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 px-3">Final Cleaned Records</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-600" id="table-final-records">290,584</td>
+                    <td class="py-2.5 px-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Verified</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 px-3">Remaining Duplicate Users</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-600" id="table-remaining-dups">0</td>
+                    <td class="py-2.5 px-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Clean</span></td>
+                  </tr>
+                  <tr>
+                    <td class="py-2.5 px-3">Missing / Null Values</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-600" id="table-missing-vals">0</td>
+                    <td class="py-2.5 px-3 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">Zero Nulls</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Invalid Assignment Mismatch Breakdown -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-600"></i>
+              Invalid Group & Landing Page Mismatches
+            </h3>
+            
+            <p class="text-xs text-slate-500 leading-relaxed">
+              In an ideal A/B test setup, <code class="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-700">control</code> users must only receive <code class="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-700">old_page</code> and <code class="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-700">treatment</code> users must only receive <code class="font-mono bg-slate-100 px-1 py-0.5 rounded text-slate-700">new_page</code>.
+            </p>
+
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <div class="bg-rose-50/50 border border-rose-200 rounded-xl p-3.5">
+                <span class="text-[11px] font-semibold text-rose-800 block">Control + new_page</span>
+                <div class="text-lg font-bold text-rose-700 font-mono mt-1" id="mismatch-control-new">1,928 rows</div>
+                <span class="text-[10px] text-rose-600">Cross-contamination removed</span>
+              </div>
+              <div class="bg-rose-50/50 border border-rose-200 rounded-xl p-3.5">
+                <span class="text-[11px] font-semibold text-rose-800 block">Treatment + old_page</span>
+                <div class="text-lg font-bold text-rose-700 font-mono mt-1" id="mismatch-treatment-old">1,965 rows</div>
+                <span class="text-[10px] text-rose-600">Cross-contamination removed</span>
+              </div>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-3 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+              <span>Total Contaminated Records Purged:</span>
+              <span class="font-bold text-slate-900 font-mono" id="mismatch-total">3,893 Rows (1.32%)</span>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- SECTION 3: EXPERIMENT ANALYSIS -->
+      <section id="section-experiment" class="space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">SECTION 3</span>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Experiment Analysis: Control vs Treatment</h2>
+          <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+            Direct side-by-side evaluation of the baseline control group against the redesigned treatment variant.
+          </p>
+        </div>
+
+        <!-- Side-by-Side Comparison Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Control Card -->
+          <div class="bg-white rounded-2xl border-2 border-blue-200/80 p-6 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs">
+                  A
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-slate-900">Control Group</h3>
+                  <span class="text-xs text-slate-500 font-mono">landing_page = old_page</span>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                Baseline (Existing)
+              </span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 my-5 text-center">
+              <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">Total Users</span>
+                <span class="text-base font-bold text-slate-900 font-mono mt-0.5 block" id="exp-control-users">145,274</span>
+              </div>
+              <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">Conversions</span>
+                <span class="text-base font-bold text-blue-600 font-mono mt-0.5 block" id="exp-control-convs">17,489</span>
+              </div>
+              <div class="bg-blue-50/70 rounded-xl p-3 border border-blue-200">
+                <span class="text-[10px] uppercase tracking-wider text-blue-700 font-semibold block">Conversion Rate</span>
+                <span class="text-base font-extrabold text-blue-700 font-mono mt-0.5 block" id="exp-control-cr">12.04%</span>
+              </div>
+            </div>
+
+            <div class="text-xs text-slate-500 space-y-1 bg-slate-50/60 p-3 rounded-xl border border-slate-100">
+              <div class="flex justify-between font-mono"><span>Non-Converted Users:</span> <strong class="text-slate-700" id="exp-control-nonconv">127,785 (87.96%)</strong></div>
+              <div class="flex justify-between font-mono"><span>Traffic Split:</span> <strong class="text-slate-700" id="exp-control-split">49.99%</strong></div>
+            </div>
+          </div>
+
+          <!-- Treatment Card -->
+          <div class="bg-white rounded-2xl border-2 border-indigo-200/80 p-6 shadow-sm relative overflow-hidden">
+            <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
+                  B
+                </div>
+                <div>
+                  <h3 class="text-base font-bold text-slate-900">Treatment Group</h3>
+                  <span class="text-xs text-slate-500 font-mono">landing_page = new_page</span>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                Variant (New Design)
+              </span>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 my-5 text-center">
+              <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">Total Users</span>
+                <span class="text-base font-bold text-slate-900 font-mono mt-0.5 block" id="exp-treatment-users">145,311</span>
+              </div>
+              <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">Conversions</span>
+                <span class="text-base font-bold text-indigo-600 font-mono mt-0.5 block" id="exp-treatment-convs">17,264</span>
+              </div>
+              <div class="bg-indigo-50/70 rounded-xl p-3 border border-indigo-200">
+                <span class="text-[10px] uppercase tracking-wider text-indigo-700 font-semibold block">Conversion Rate</span>
+                <span class="text-base font-extrabold text-indigo-700 font-mono mt-0.5 block" id="exp-treatment-cr">11.88%</span>
+              </div>
+            </div>
+
+            <div class="text-xs text-slate-500 space-y-1 bg-slate-50/60 p-3 rounded-xl border border-slate-100">
+              <div class="flex justify-between font-mono"><span>Non-Converted Users:</span> <strong class="text-slate-700" id="exp-treatment-nonconv">128,047 (88.12%)</strong></div>
+              <div class="flex justify-between font-mono"><span>Traffic Split:</span> <strong class="text-slate-700" id="exp-treatment-split">50.01%</strong></div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- SECTION 4: CONVERSION ANALYSIS -->
+      <section id="section-conversion" class="space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">SECTION 4</span>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Conversion Analysis & Visualizations</h2>
+          <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+            Detailed graphical comparison of conversion rates, relative lifts, and user population compositions.
+          </p>
+        </div>
+
+        <!-- Delta KPI Summary Banner -->
+        <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold" id="delta-icon-box">
+              <i data-lucide="git-compare" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-bold text-amber-950">Observed Conversion Difference:</span>
+                <span class="px-2.5 py-0.5 rounded-md text-xs font-mono font-bold bg-amber-200/80 text-amber-900" id="delta-points">-0.158 percentage points</span>
+              </div>
+              <p class="text-xs text-amber-800 mt-1">
+                Relative Conversion Lift: <strong class="font-mono text-amber-950" id="delta-lift">-1.31%</strong> &bull; Calculated as <code class="font-mono bg-amber-100 px-1 py-0.5 rounded text-amber-900" id="delta-formula">(11.88% - 12.04%) / 12.04%</code>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Explanatory Interpretation Alert Note -->
+        <div class="bg-blue-50/60 border border-blue-200 rounded-xl p-4 flex items-start gap-3 text-xs text-blue-900">
+          <i data-lucide="help-circle" class="w-4 h-4 text-blue-600 mt-0.5 shrink-0"></i>
+          <p class="leading-relaxed" id="conversion-context-text">
+            <strong>Analytical Context:</strong> "The Treatment group shows a slightly lower observed conversion rate than Control, but this observed difference must be tested statistically before making a business decision."
+          </p>
+        </div>
+
+        <!-- Visual Charts Grid (Chart 1: Conversion Rate Bar Chart & Chart 2: Converted vs Non-Converted Stacked Bar) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Chart 1: Conversion Rates -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">Conversion Rate Comparison</h3>
+                <span class="text-xs text-slate-500 font-medium" id="chart-cr-subtitle">Control (12.04%) vs Treatment (11.88%)</span>
+              </div>
+              <span class="text-[11px] font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Bar Chart</span>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="conversionRateChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: Stacked Converted vs Non-Converted -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="text-sm font-bold text-slate-900">User Breakdown (Converted vs Non-Converted)</h3>
+                <span class="text-xs text-slate-500 font-medium">Absolute user counts across experiment arms</span>
+              </div>
+              <span class="text-[11px] font-mono text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Stacked Chart</span>
+            </div>
+            <div class="h-64 relative">
+              <canvas id="stackedConversionChart"></canvas>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- SECTION 5: STATISTICAL TEST -->
+      <section id="section-statistical-test" class="space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">SECTION 5</span>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Statistical Hypothesis Testing</h2>
+          <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+            Two-Proportion Z-Test evaluating whether the observed difference is statistically distinguishable from zero or attributable to chance.
+          </p>
+        </div>
+
+        <!-- Main Statistical Test Card -->
+        <div class="bg-white rounded-2xl border-2 border-indigo-200 shadow-sm p-6 space-y-6">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+            <div>
+              <span class="text-[11px] font-mono uppercase font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md border border-indigo-100">PARAMETRIC HYPOTHESIS TEST</span>
+              <h3 class="text-xl font-extrabold text-slate-900 mt-1">Two-Proportion Z-Test</h3>
+            </div>
+
+            <!-- Decision Status Indicator -->
+            <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-sm" id="stat-status-container">
+              <i data-lucide="alert-octagon" class="w-5 h-5 text-amber-600" id="stat-decision-icon"></i>
+              <div>
+                <span class="text-[10px] uppercase tracking-wider font-bold text-amber-700 block" id="stat-status-badge">NOT STATISTICALLY SIGNIFICANT</span>
+                <span class="text-sm font-extrabold text-amber-950 font-mono" id="stat-decision-badge">FAIL TO REJECT H₀</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hypotheses Display Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-1.5">
+              <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                Null Hypothesis (H₀)
+              </span>
+              <p class="text-xs text-slate-600 italic">
+                "There is no significant difference in conversion rates between Control and Treatment."
+              </p>
+              <div class="text-[11px] font-mono text-slate-500 pt-1">H₀: p_treatment - p_control = 0</div>
+            </div>
+
+            <div class="bg-indigo-50/50 border border-indigo-200 rounded-xl p-4 space-y-1.5">
+              <span class="text-xs font-bold text-indigo-800 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                Alternative Hypothesis (H₁)
+              </span>
+              <p class="text-xs text-indigo-900 italic">
+                "There is a significant difference in conversion rates between Control and Treatment."
+              </p>
+              <div class="text-[11px] font-mono text-indigo-600 pt-1">H₁: p_treatment - p_control ≠ 0</div>
+            </div>
+
+          </div>
+
+          <!-- Key Statistical Test Metrics (4-grid) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            
+            <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200 text-center">
+              <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">Significance Level (α)</span>
+              <span class="text-lg font-extrabold text-slate-900 font-mono mt-1 block">0.05</span>
+              <span class="text-[10px] text-slate-500">95% Confidence (z_crit = ±1.96)</span>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200 text-center">
+              <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">z-statistic</span>
+              <span class="text-lg font-extrabold text-slate-900 font-mono mt-1 block" id="stat-z-stat">-1.312</span>
+              <span class="text-[10px] text-slate-500" id="stat-z-zone">Inside fail-to-reject zone</span>
+            </div>
+
+            <div class="bg-indigo-50/60 rounded-xl p-3.5 border border-indigo-200 text-center">
+              <span class="text-[10px] uppercase tracking-wider text-indigo-700 font-semibold block">p-value</span>
+              <span class="text-lg font-extrabold text-indigo-700 font-mono mt-1 block" id="stat-p-val">0.18965</span>
+              <span class="text-[10px] text-indigo-600 font-medium" id="stat-p-comp">p-value (0.18965) &gt; α (0.05)</span>
+            </div>
+
+            <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200 text-center">
+              <span class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold block">Pooled Proportion (p_pool)</span>
+              <span class="text-lg font-extrabold text-slate-900 font-mono mt-1 block" id="stat-p-pool">11.96%</span>
+              <span class="text-[10px] text-slate-500" id="stat-se-desc">SE ≈ 0.001204</span>
+            </div>
+
+          </div>
+
+          <!-- Interactive Gaussian Normal Distribution Curve (SVG / Canvas) -->
+          <div class="bg-slate-950 text-white rounded-2xl p-5 border border-slate-800 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h4 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i data-lucide="activity" class="w-4 h-4 text-indigo-400"></i>
+                  Standard Normal Distribution ($Z \sim \mathcal{N}(0, 1)$) &amp; Decision Regions
+                </h4>
+                <p class="text-xs text-slate-400 mt-0.5" id="gaussian-subtitle">Visualizing the critical rejection thresholds (±1.96) versus the observed test statistic (z = -1.312).</p>
+              </div>
+              <div class="flex items-center gap-3 text-[11px] font-mono">
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-rose-500/60 inline-block"></span> Rejection Tails (α/2 = 0.025)</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-indigo-500/60 inline-block"></span> <span id="gaussian-p-legend">p-value Area (0.18965)</span></span>
+              </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="h-60 relative w-full pt-2">
+              <canvas id="gaussianDistributionCanvas" class="w-full h-full"></canvas>
+            </div>
+
+            <div class="text-[11px] text-slate-400 bg-slate-900/90 p-3 rounded-xl border border-slate-800 flex items-center justify-between font-mono">
+              <span id="gaussian-z-summary">Observed z = -1.312 lies between -1.96 and +1.96</span>
+              <span class="text-amber-400 font-bold" id="gaussian-status-badge">STATUS: NOT STATISTICALLY SIGNIFICANT</span>
+            </div>
+          </div>
+
+          <!-- Strict Statistical Interpretation Callout -->
+          <div class="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 space-y-2.5">
+            <div class="flex items-center gap-2">
+              <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-400 shrink-0"></i>
+              <h4 class="text-sm font-bold text-white">Statistical Interpretation</h4>
+            </div>
+            
+            <p class="text-xs text-slate-300 leading-relaxed font-sans" id="stat-interp-main">
+              "The observed difference in conversion rates is not statistically significant at the 5% significance level."
+            </p>
+            
+            <div class="bg-slate-950/80 p-3 rounded-xl border border-slate-800/80 text-xs text-slate-400 space-y-1">
+              <div class="text-slate-300 font-semibold flex items-center gap-1.5">
+                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-indigo-400"></i>
+                Formal Scientific Conclusion:
+              </div>
+              <p class="italic text-indigo-200" id="stat-interp-formal">
+                "The experiment does not provide sufficient statistical evidence that the Treatment landing page changed conversion performance."
+              </p>
+              <p class="text-[11px] text-slate-500 pt-1" id="stat-interp-note">
+                Note: We do NOT claim that the Treatment landing page is definitively worse or that the redesign failed. We simply fail to reject the null hypothesis due to lack of evidence beyond natural variance.
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- SECTION 6: BUSINESS RECOMMENDATION -->
+      <section id="section-recommendation" class="space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">SECTION 6</span>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Recommended Business Decision</h2>
+          <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+            Translating mathematical rigor into actionable executive recommendations for product and campaign managers.
+          </p>
+        </div>
+
+        <!-- Prominent Business Recommendation Panel -->
+        <div class="bg-gradient-to-br from-indigo-900 via-slate-900 to-indigo-950 text-white rounded-3xl p-8 shadow-xl border border-indigo-500/30 relative overflow-hidden">
+          <div class="absolute right-0 top-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div class="max-w-3xl space-y-6 relative z-10">
+            
+            <div>
+              <span class="px-3 py-1 rounded-full text-xs font-bold font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                EXECUTIVE DIRECTIVE
+              </span>
+              <h3 class="text-2xl sm:text-3xl font-extrabold text-white mt-2 tracking-tight" id="rec-headline">
+                RETAIN THE EXISTING LANDING PAGE FOR NOW
+              </h3>
+              <p class="text-sm text-slate-300 mt-1" id="rec-subhead">
+                Maintain current production traffic routing to <code class="text-indigo-300 font-mono bg-slate-800/80 px-1.5 py-0.5 rounded">old_page</code> while engineering new experimental iterations.
+              </p>
+            </div>
+
+            <!-- 4 Key Supporting Rationale Points -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+              
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-start gap-3">
+                <div class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5" id="rec-card-1-icon">
+                  <i data-lucide="trending-down" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white" id="rec-card-1-title">Slightly Lower Observed Rate</h4>
+                  <p class="text-[11px] text-slate-300 mt-0.5 leading-snug" id="rec-card-1-desc">Treatment conversion was 11.88% compared to Control at 12.04%.</p>
+                </div>
+              </div>
+
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-start gap-3">
+                <div class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5" id="rec-card-2-icon">
+                  <i data-lucide="x-circle" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white" id="rec-card-2-title">No Statistical Significance</h4>
+                  <p class="text-[11px] text-slate-300 mt-0.5 leading-snug" id="rec-card-2-desc">Observed difference (-0.158% points) could arise entirely from random variance.</p>
+                </div>
+              </div>
+
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-start gap-3">
+                <div class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5" id="rec-card-3-icon">
+                  <i data-lucide="calculator" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white" id="rec-card-3-title">p-value &gt; 0.05 Threshold</h4>
+                  <p class="text-[11px] text-slate-300 mt-0.5 leading-snug" id="rec-card-3-desc">Test p-value of 0.18965 exceeds the 5% decision threshold (α = 0.05).</p>
+                </div>
+              </div>
+
+              <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex items-start gap-3">
+                <div class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5" id="rec-card-4-icon">
+                  <i data-lucide="repeat" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white" id="rec-card-4-title">Iterative Experimentation</h4>
+                  <p class="text-[11px] text-slate-300 mt-0.5 leading-snug" id="rec-card-4-desc">Further experimentation is recommended before replacing the current landing page.</p>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Action CTA Button -->
+            <div class="pt-2 flex items-center gap-4">
+              <a href="#section-statistical-test" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-600/30 transition active:scale-95">
+                <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+                <span>View Detailed Analysis</span>
+              </a>
+              <a href="#section-future" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition">
+                <span>Explore Next Experiment Roadmap</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SECTION 7: EXPERIMENT WORKFLOW TIMELINE -->
+      <section id="section-workflow" class="space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">SECTION 7</span>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">End-to-End Experimentation Lifecycle</h2>
+          <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+            Chronological stages executed throughout the IBM Q2D A/B testing analytics workflow.
+          </p>
+        </div>
+
+        <!-- 7-Step Timeline -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
+          <div class="space-y-4">
+            
+            <!-- Step 1 -->
+            <div class="flex items-start gap-4 pb-4 border-b border-slate-100">
+              <div class="w-8 h-8 rounded-full bg-indigo-50 border-2 border-indigo-600 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">1</div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-900">1. Business Problem Definition</h4>
+                <p class="text-xs text-slate-500 mt-0.5">Identify business goals: Determine if the new landing page (<code class="text-indigo-600 font-mono">new_page</code>) drives higher purchasing conversions than the baseline (<code class="text-indigo-600 font-mono">old_page</code>).</p>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="flex items-start gap-4 pb-4 border-b border-slate-100">
+              <div class="w-8 h-8 rounded-full bg-indigo-50 border-2 border-indigo-600 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">2</div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-900">2. Data Collection & Ingestion</h4>
+                <p class="text-xs text-slate-500 mt-0.5" id="timeline-step-2-desc">Collect raw user interaction logs spanning user_id, timestamp, experiment group, landing page, and binary conversion status.</p>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="flex items-start gap-4 pb-4 border-b border-slate-100">
+              <div class="w-8 h-8 rounded-full bg-indigo-50 border-2 border-indigo-600 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">3</div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-900">3. Data Cleaning & Integrity Auditing</h4>
+                <p class="text-xs text-slate-500 mt-0.5" id="timeline-step-3-desc">Audit duplicate IDs, remove invalid group/page cross-assignments, and eliminate residual duplicate users to validate the dataset.</p>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="flex items-start gap-4 pb-4 border-b border-slate-100">
+              <div class="w-8 h-8 rounded-full bg-indigo-50 border-2 border-indigo-600 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">4</div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-900">4. Exploratory Data Analysis (EDA)</h4>
+                <p class="text-xs text-slate-500 mt-0.5" id="timeline-step-4-desc">Analyze user distributions across groups (Control 145,274 vs Treatment 145,311), compute conversion rates (12.04% vs 11.88%) and observed lift (-1.31%).</p>
+              </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="flex items-start gap-4 pb-4 border-b border-slate-100">
+              <div class="w-8 h-8 rounded-full bg-indigo-50 border-2 border-indigo-600 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">5</div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-900">5. A/B Testing & Statistical Modeling</h4>
+                <p class="text-xs text-slate-500 mt-0.5" id="timeline-step-5-desc">Formulate null and alternative hypotheses, establish significance threshold α = 0.05, compute pooled proportion (11.96%) and two-proportion z-statistic (z = -1.312).</p>
+              </div>
+            </div>
+
+            <!-- Step 6 -->
+            <div class="flex items-start gap-4 pb-4 border-b border-slate-100">
+              <div class="w-8 h-8 rounded-full bg-indigo-50 border-2 border-indigo-600 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">6</div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-900">6. Statistical Decision</h4>
+                <p class="text-xs text-slate-500 mt-0.5" id="timeline-step-6-desc">Compare two-tailed p-value (0.18965) against α = 0.05 &rarr; FAIL TO REJECT H₀ (Not Statistically Significant).</p>
+              </div>
+            </div>
+
+            <!-- Step 7 -->
+            <div class="flex items-start gap-4">
+              <div class="w-8 h-8 rounded-full bg-emerald-50 border-2 border-emerald-600 text-emerald-600 flex items-center justify-center font-bold text-xs shrink-0" id="timeline-step-7-badge">7</div>
+              <div>
+                <h4 class="text-sm font-bold text-slate-900">7. Business Recommendation & Action</h4>
+                <p class="text-xs text-slate-500 mt-0.5" id="timeline-step-7-desc">Recommend retaining existing landing page, preventing unnecessary engineering costs, and formulating new multivariate experiment hypotheses.</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- SECTION 8: FUTURE EXPERIMENTS -->
+      <section id="section-future" class="space-y-6">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            <span class="text-xs font-bold text-indigo-600 uppercase tracking-wider">SECTION 8</span>
+          </div>
+          <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-1">Future Experimentation Opportunities</h2>
+          <p class="text-sm text-slate-600 mt-1 leading-relaxed">
+            Structured roadmap for iterating upon the e-commerce campaign funnel to discover positive conversion lift.
+          </p>
+        </div>
+
+        <!-- 7 Roadmap Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          
+          <!-- Card 1 -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:border-indigo-300 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <i data-lucide="layout" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-xs font-bold text-slate-900">Test New Landing-Page Designs</h3>
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+              Iterate on hero layouts, product showcase hierarchy, and visual proof elements rather than single page swaps.
+            </p>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:border-indigo-300 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <i data-lucide="mouse-pointer-click" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-xs font-bold text-slate-900">Test Headlines &amp; CTAs</h3>
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+              Conduct targeted A/B tests on value proposition copy, primary button colors, microcopy, and urgency cues.
+            </p>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:border-indigo-300 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <i data-lucide="pie-chart" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-xs font-bold text-slate-900">Analyze Customer Segments</h3>
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+              Disaggregate results by device type (mobile vs desktop), traffic source, geographic region, and returning vs new users.
+            </p>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:border-indigo-300 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-xs font-bold text-slate-900">Evaluate Revenue Per User</h3>
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+              Expand beyond binary conversion rate to analyze Average Order Value (AOV) and Total Revenue per Visitor (RPV).
+            </p>
+          </div>
+
+          <!-- Card 5 -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:border-indigo-300 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+              <i data-lucide="binary" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-xs font-bold text-slate-900">Calculate Confidence Intervals</h3>
+            <p class="text-[11px] text-slate-500 leading-relaxed" id="future-ci-desc">
+              Construct 95% Confidence Intervals for the true conversion rate difference [-0.0039, +0.0008] to quantify bounds.
+            </p>
+          </div>
+
+          <!-- Card 6 -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:border-indigo-300 transition space-y-2">
+            <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+              <i data-lucide="zap" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-xs font-bold text-slate-900">Perform Statistical Power Analysis</h3>
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+              Pre-calculate Minimum Detectable Effect (MDE) and sample sizes required to achieve 80% or 90% statistical power.
+            </p>
+          </div>
+
+          <!-- Card 7 (Spans 2 or 3) -->
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm hover:border-indigo-300 transition space-y-2 md:col-span-2 lg:col-span-3">
+            <div class="w-8 h-8 rounded-lg bg-teal-50 text-teal-600 flex items-center justify-center">
+              <i data-lucide="gauge" class="w-4 h-4"></i>
+            </div>
+            <h3 class="text-xs font-bold text-slate-900">Build Automated Experiment Monitoring</h3>
+            <p class="text-[11px] text-slate-500 leading-relaxed">
+              Deploy continuous real-time guardrail metrics, sample ratio mismatch (SRM) monitors, and sequential testing early stopping boundaries to protect business revenue during live tests.
+            </p>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 mt-12 py-8 text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      
+      <div class="space-y-1 text-center sm:text-left">
+        <div class="font-bold text-slate-800 text-sm">E-Commerce Campaign Analysis | IBM Q2D Internship Project</div>
+        <p class="text-slate-500">Built with Python, Pandas, NumPy, Matplotlib, SciPy &amp; modern web technologies</p>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <span class="font-medium text-slate-700">Author: Sowmika Kurmana (ANITS)</span>
+        <a href="https://github.com/Sowmika-Kurmana/E-Commerce-Campaign-Analysis" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-medium transition">
+          <i data-lucide="github" class="w-3.5 h-3.5"></i>
+          <span>View on GitHub</span>
+        </a>
+      </div>
+
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
